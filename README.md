@@ -10,6 +10,10 @@
 ## Prerequisites
 
 - A Kubernetes cluster with `kubectl` context configured
+- **Apple Silicon only** — enable Docker Desktop's amd64 emulation:
+  *Docker Desktop → Settings → General → "Use Rosetta for x86_64/amd64
+  emulation on Apple Silicon"*. Required because the upstream Centaur
+  service images are amd64-only (see [Notes](#notes-for-local-dev-clusters-docker-desktop-on-apple-silicon)).
 - Argo CD installed in the `argocd` namespace:
   ```bash
   kubectl create namespace argocd
@@ -68,18 +72,26 @@ clusters/centaur-lab/argocd/
 ## Notes for local dev clusters (Docker Desktop on Apple Silicon)
 
 `paradigmxyz/centaur` publishes amd64-only images at
-`ghcr.io/paradigmxyz/centaur/*`. On Apple Silicon kubelet asks for
-`linux/arm64/v8` and gets `ImagePullBackOff`. Until upstream multi-arch lands
-(see `paradigmxyz/centaur/.github/workflows/publish-images.yml`), this repo's
-`values/centaur.yaml` points the four base services at unqualified
-`centaur-*:latest` with `pullPolicy: IfNotPresent`, expecting locally-built
-arm64 images in the Docker daemon.
+`ghcr.io/paradigmxyz/centaur/centaur-*` — the workflow in
+`paradigmxyz/centaur/.github/workflows/publish-images.yml` lacks a
+`platforms: linux/amd64,linux/arm64` build directive, so the manifest list
+contains only `linux/amd64`. On Apple Silicon, kubelet asks for
+`linux/arm64/v8` and would fall through to `ImagePullBackOff`.
 
-The overlay image stays pinned to GHCR — your overlay workflow already builds
-`linux/amd64,linux/arm64`, so it pulls fine on both platforms.
+The fix is **Docker Desktop's Rosetta emulation toggle** (see Prerequisites).
+With it on, the Docker Desktop runtime advertises support for `linux/amd64`
+on the arm64 host, kubelet pulls the amd64 manifest, and the binary runs
+under Rosetta translation. Trade-off: ~2-4× CPU overhead vs native arm64
+for compute-heavy pods. Acceptable for a single-host lab; revisit if the
+agent pods feel slow.
 
-When deploying to amd64 (cloud), override the four `*.image.repository` and
-`*.image.tag` values to point at GHCR with concrete `sha-*` tags.
+The overlay image is unaffected — `Mperhats/centaur-lab`'s overlay workflow
+publishes `linux/amd64,linux/arm64` so it pulls natively on both platforms.
+
+For real production clusters (amd64 cloud nodes), no change is needed —
+upstream amd64 images run as-is with no emulation. You can also drop
+`pullPolicy: IfNotPresent` and pin specific `sha-*` tags by editing
+`values/centaur.yaml`.
 
 ## License
 

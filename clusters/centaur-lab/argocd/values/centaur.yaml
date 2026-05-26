@@ -1,44 +1,33 @@
-global:
-  imagePullSecrets: []
-
-secretManager:
-  existingSecretName: centaur-infra-env
-  envPrefix: ""
-
-firewall:
-  existingCaSecretName: centaur-firewall-ca
-  existingCaKeySecretName: centaur-firewall-ca-key
-
-# NOTE on base service images:
-# The four core Centaur services (api, sandbox/agent, slackbot, iron-proxy)
-# point at unqualified `centaur-*` repositories with `tag: latest` and
-# `pullPolicy: IfNotPresent`. This is a deliberate dev-cluster deviation —
-# Docker Desktop's Kubernetes resolves these names against the locally-built
-# arm64 images already cached on this host (built by `just build-images` or
-# similar in the centaur monorepo).
+# Helm values for the Centaur Application managed by Argo CD.
 #
-# The reason: paradigmxyz/centaur publishes amd64-only images at GHCR
-# (paradigmxyz/centaur/.github/workflows/publish-images.yml lacks the
-# `platforms: linux/amd64,linux/arm64` parameter). On Apple Silicon the
-# kubelet asks for linux/arm64/v8 and gets ImagePullBackOff. Until upstream
-# publishes multi-arch (or we mirror multi-arch into ghcr.io/mperhats/...),
-# this dev cluster reads the base services from the local Docker daemon.
+# These values overlay the chart defaults from
+#   paradigmxyz/centaur:contrib/chart/values.yaml
+# Anything that already matches the chart default is intentionally omitted so
+# this file only encodes what is *unique* to the centaur-lab cluster.
 #
-# The overlay image is unaffected — your overlay workflow already builds
-# linux/amd64,linux/arm64, so we keep that one pinned to GHCR.
+# Image strategy on Apple Silicon (Docker Desktop):
+#   paradigmxyz/centaur publishes amd64-only images under
+#   `ghcr.io/paradigmxyz/centaur/centaur-*`. We rely on Docker Desktop's
+#   "Use Rosetta for x86_64/amd64 emulation on Apple Silicon" toggle
+#   (Settings → General) to translate at runtime — no fork, no self-publish.
+#   See README.md for the bootstrap checklist.
 #
-# When deploying to an amd64 cloud cluster, override these four blocks via a
-# values overlay to point at GHCR with a sha- tag.
+#   The chart's default image.repository values are unqualified (e.g.
+#   `centaur-api`) which would resolve to docker.io/library/* — so we have
+#   to set the GHCR repo explicitly for each base service. This mirrors the
+#   `source=ghcr` pattern documented at
+#   https://docs.centaur.dev/mac-mini-setup
+#
+#   Tag is :latest to track main-branch builds; pullPolicy: IfNotPresent
+#   keeps the cached layer warm across pod restarts. Pin a specific
+#   `sha-XXXXXXX` tag here if you need reproducibility.
 
 api:
   image:
-    repository: centaur-api
-    tag: latest
+    repository: ghcr.io/paradigmxyz/centaur/centaur-api
     pullPolicy: IfNotPresent
   defaultHarness: claude-code
   executionWorkerEnabled: true
-  workflowWorkerEnabled: true
-  warmPoolEnabled: false
   pluginWatcherEnabled: true
   slackEtlEnabled: true
   slackSyncBackfillLookbackDays: 700
@@ -53,12 +42,25 @@ api:
     BFTS_REFLECTION_ENABLED: "1"
     WORKFLOW_WORKER_CONCURRENCY: "16"
 
-overlay:
+# Overlay image repository and tag are set in bootstrap/centaur.yaml's
+# helm.parameters block so Argo CD Image Updater can bump the tag in place
+# when a new sha-* build lands on the overlay GHCR repo. Don't duplicate
+# them here — that creates two sources of truth.
+overlay: {}
+
+slackbot:
   image:
-    repository: ghcr.io/mperhats/centaur-lab/centaur-overlay
-    tag: sha-87bfef6
+    repository: ghcr.io/paradigmxyz/centaur/centaur-slackbot
     pullPolicy: IfNotPresent
-    sourcePath: /overlay
+
+ironProxy:
+  image:
+    repository: ghcr.io/paradigmxyz/centaur/centaur-iron-proxy
+    pullPolicy: IfNotPresent
+  # Chart default is `onepassword`. We resolve tool/harness credentials from
+  # the centaur-infra-env Secret instead, so iron-proxy reads them as plain
+  # env vars.
+  secretSource: env
 
 agentSandbox:
   enabled: true
@@ -68,32 +70,14 @@ agentSandbox:
     sandboxWarmPoolConcurrentWorkers: 5
 
 sandbox:
-  controller: agent-sandbox
   image:
-    repository: centaur-agent
-    tag: latest
+    repository: ghcr.io/paradigmxyz/centaur/centaur-agent
     pullPolicy: IfNotPresent
+  controller: agent-sandbox
   reposPath: /var/lib/centaur/repos
   stateVolume:
     enabled: true
     size: 1Gi
-    storageClassName: ""
-  runtimeClassName: ""
-
-slackbot:
-  enabled: true
-  image:
-    repository: centaur-slackbot
-    tag: latest
-    pullPolicy: IfNotPresent
-
-ironProxy:
-  image:
-    repository: centaur-iron-proxy
-    tag: latest
-    pullPolicy: IfNotPresent
-  secretSource: env
-  secretTtl: 10m
 
 repoCache:
   enabled: true
@@ -104,18 +88,3 @@ repoCache:
   githubToken:
     existingSecretName: centaur-infra-env
     secretKey: GITHUB_TOKEN
-
-postgres:
-  enabled: true
-  auth:
-    existingSecretName: centaur-infra-env
-    existingSecretKey: POSTGRES_PASSWORD
-  persistence:
-    enabled: true
-    size: 20Gi
-
-ingress:
-  enabled: false
-
-networkPolicy:
-  enabled: true
