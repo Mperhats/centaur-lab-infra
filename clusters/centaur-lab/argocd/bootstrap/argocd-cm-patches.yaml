@@ -1,0 +1,40 @@
+# Argo CD configuration patches for this cluster.
+#
+# Apply this AFTER `kubectl apply -n argocd -f https://raw.githubusercontent.com/
+# argoproj/argo-cd/stable/manifests/install.yaml --server-side --force-conflicts`
+# and BEFORE applying the centaur Application:
+#
+#   kubectl apply -f clusters/centaur-lab/argocd/bootstrap/argocd-cm-patches.yaml
+#   kubectl -n argocd rollout restart sts/argocd-application-controller deploy/argocd-server
+#
+# Two settings:
+#
+#   1. application.resourceTrackingMethod=label
+#      Default `annotation+label` injects `argocd.argoproj.io/tracking-id` on
+#      every managed resource. Combined with ServerSideDiff, this can show as
+#      drift on resources whose chart-rendered desired state doesn't include
+#      that annotation (the chart can't, since it's an Argo CD runtime concern).
+#      `label` mode uses only `app.kubernetes.io/instance`, which the Centaur
+#      chart already emits via Helm's standard labels — no annotation drift.
+#
+#   2. resource.customizations.ignoreDifferences.apps_StatefulSet
+#      The Kubernetes StatefulSet controller injects `apiVersion: v1` and
+#      `kind: PersistentVolumeClaim` into each entry of `spec.volumeClaimTemplates`
+#      after creation. The chart-rendered VCT entries don't include those fields,
+#      causing perpetual OutOfSync on every chart-managed StatefulSet (postgres,
+#      laminar-postgres if/when re-enabled, etc.). This diff is generic to
+#      Kubernetes, not specific to Centaur, so we apply it cluster-wide.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  application.resourceTrackingMethod: label
+  resource.customizations.ignoreDifferences.apps_StatefulSet: |
+    jqPathExpressions:
+    - .spec.volumeClaimTemplates[].apiVersion
+    - .spec.volumeClaimTemplates[].kind
