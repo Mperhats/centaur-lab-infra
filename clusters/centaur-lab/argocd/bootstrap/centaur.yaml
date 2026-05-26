@@ -1,0 +1,61 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: centaur
+  namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: overlay=ghcr.io/Mperhats/centaur-lab
+    argocd-image-updater.argoproj.io/write-back-method: argocd
+    argocd-image-updater.argoproj.io/overlay.helm.image-name: overlay.image.repository
+    argocd-image-updater.argoproj.io/overlay.helm.image-tag: overlay.image.tag
+    argocd-image-updater.argoproj.io/overlay.update-strategy: newest-build
+    argocd-image-updater.argoproj.io/overlay.allow-tags: regexp:^sha-[0-9a-f]{7}$
+spec:
+  project: default
+  sources:
+    - repoURL: https://github.com/paradigmxyz/centaur.git
+      targetRevision: main
+      path: contrib/chart
+      helm:
+        valueFiles:
+          - $values/clusters/centaur-lab/argocd/values/centaur.yaml
+        parameters:
+          - name: overlay.image.repository
+            value: ghcr.io/Mperhats/centaur-lab
+            forceString: true
+          - name: overlay.image.tag
+            value: sha-0000000
+            forceString: true
+          - name: api.image.tag
+            value: sha-0000000
+            forceString: true
+          - name: slackbot.image.tag
+            value: sha-0000000
+            forceString: true
+          - name: sandbox.image.tag
+            value: sha-0000000
+            forceString: true
+          - name: ironProxy.image.tag
+            value: sha-0000000
+            forceString: true
+    - repoURL: https://github.com/Mperhats/centaur-lab-infra.git
+      targetRevision: main
+      ref: values
+    - repoURL: https://github.com/Mperhats/centaur-lab-infra.git
+      targetRevision: main
+      path: clusters/centaur-lab/argocd/apps/centaur
+  destination:
+    namespace: centaur-system
+    server: https://kubernetes.default.svc
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+        pod-security.kubernetes.io/audit: baseline
+        pod-security.kubernetes.io/warn: baseline
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    automated:
+      prune: true
+      selfHeal: true

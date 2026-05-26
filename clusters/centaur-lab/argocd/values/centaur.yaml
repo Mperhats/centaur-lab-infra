@@ -1,0 +1,60 @@
+global:
+  imagePullSecrets: []
+
+secretManager:
+  existingSecretName: centaur-infra-env
+  envPrefix: ""
+
+api:
+  image:
+    repository: ghcr.io/paradigmxyz/centaur-api
+    tag: sha-0000000
+    pullPolicy: IfNotPresent
+  executionWorkerEnabled: true
+  workflowWorkerEnabled: true
+  warmPoolEnabled: true
+  runtimeCredentialGuardEnabled: true
+
+overlay:
+  image:
+    repository: ghcr.io/Mperhats/centaur-lab
+    tag: sha-0000000
+    pullPolicy: IfNotPresent
+    sourcePath: /overlay
+
+sandbox:
+  image:
+    repository: ghcr.io/paradigmxyz/centaur-agent
+    tag: sha-0000000
+    pullPolicy: IfNotPresent
+  runtimeClassName: ""
+
+slackbot:
+  enabled: true
+  image:
+    repository: ghcr.io/paradigmxyz/centaur-slackbot
+    tag: sha-0000000
+    pullPolicy: IfNotPresent
+
+ironProxy:
+  image:
+    repository: ghcr.io/paradigmxyz/centaur-iron-proxy
+    tag: sha-0000000
+    pullPolicy: IfNotPresent
+  secretSource: onepassword
+  secretTtl: 10m
+
+postgres:
+  enabled: true
+  auth:
+    existingSecretName: centaur-infra-env
+    existingSecretKey: POSTGRES_PASSWORD
+  persistence:
+    enabled: true
+    size: 20Gi
+
+ingress:
+  enabled: false
+
+networkPolicy:
+  enabled: true
