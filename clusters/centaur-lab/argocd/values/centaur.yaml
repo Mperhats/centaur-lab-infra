@@ -30,7 +30,7 @@ sandbox:
   runtimeClassName: ""
 
 slackbot:
-  enabled: true
+  enabled: false
   image:
     repository: ghcr.io/paradigmxyz/centaur/centaur-slackbot
     tag: sha-f2f94b1
@@ -41,7 +41,7 @@ ironProxy:
     repository: ghcr.io/paradigmxyz/centaur/centaur-iron-proxy
     tag: sha-f2f94b1
     pullPolicy: IfNotPresent
-  secretSource: onepassword
+  secretSource: env
   secretTtl: 10m
 
 postgres:
