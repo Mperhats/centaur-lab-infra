@@ -7,41 +7,32 @@ this repo, and mounts the `centaur-lab` overlay image.
 ## Bootstrap
 
 ```bash
-# 1. Apple Silicon only — toggle Rosetta:
-#    Docker Desktop → Settings → General → "Use Rosetta for x86_64/amd64
-#    emulation on Apple Silicon"
+# Apple Silicon only — toggle Rosetta:
+#   Docker Desktop → Settings → General → "Use Rosetta for x86_64/amd64"
 
-# 2. Install Argo CD
-kubectl create namespace argocd
-kubectl apply -n argocd --server-side --force-conflicts \
-  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
-kubectl -n argocd rollout status deploy/argocd-server --timeout=5m
-
-# 3. Create cluster Secrets from .env
-cp .env.example .env       # edit .env, replace each <PLACEHOLDER>
-./scripts/bootstrap-secrets.sh
-
-# 4. Apply Argo CD bootstrap (cm patches FIRST — required for postgres
-#    StatefulSet to converge without drift looping)
-kubectl apply -f clusters/centaur-lab/argocd/bootstrap/argocd-cm-patches.yaml
-kubectl -n argocd rollout restart sts/argocd-application-controller deploy/argocd-server
-kubectl apply -f clusters/centaur-lab/argocd/bootstrap/00-namespaces.yaml
-kubectl apply -f clusters/centaur-lab/argocd/bootstrap/centaur.yaml
+cp .env.example .env        # edit .env, replace each <PLACEHOLDER>
+./scripts/up.sh             # installs Argo CD, applies cm patches,
+                            # creates Secrets, syncs the centaur App
+./scripts/status.sh         # confirm Synced/Healthy + API /health
 ```
 
-## Verify
+## Day-to-day
 
 ```bash
-kubectl -n argocd get application centaur          # SYNC=Synced  HEALTH=Healthy
-kubectl -n centaur-system exec deploy/centaur-centaur-api -- \
-  curl -sS http://localhost:8000/health            # {"status":"ok"}
+./scripts/sync.sh           # apply edits to bootstrap/centaur.yaml
+                            # + hard-refresh Argo CD + wait for rollout
+./scripts/status.sh         # at-a-glance app + pod + sandbox health
+./scripts/clean.sh          # GC failed/succeeded pods + terminal sandboxes
+                            #   --all-sandboxes  also remove Running ones
+./scripts/down.sh           # delete the centaur App (Argo CD stays up)
+                            #   --hard           also drop namespace + PVCs
 ```
 
 ## Layout
 
 ```
 .env.example                        secret schema — cp to .env and fill in
-scripts/bootstrap-secrets.sh        creates centaur-infra-env + firewall CAs
+scripts/                            up / sync / status / clean / down
 clusters/centaur-lab/argocd/
   bootstrap/                        Argo CD Application + cm patches
   values/centaur.yaml               Helm values layered on chart defaults

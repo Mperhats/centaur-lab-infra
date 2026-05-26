@@ -3,6 +3,12 @@ kind: Application
 metadata:
   name: centaur
   namespace: argocd
+  finalizers:
+    # Cascade-delete every chart-managed resource when the Application is
+    # deleted. Without this, `kubectl delete app centaur` orphans every
+    # Deployment / Service / PVC in centaur-system. `/foreground` waits
+    # for managed resources to actually disappear before clearing the App.
+    - resources-finalizer.argocd.argoproj.io/foreground
   annotations:
     argocd-image-updater.argoproj.io/image-list: overlay=ghcr.io/mperhats/centaur-lab/centaur-overlay
     argocd-image-updater.argoproj.io/write-back-method: argocd
@@ -28,7 +34,7 @@ spec:
             value: ghcr.io/mperhats/centaur-lab/centaur-overlay
             forceString: true
           - name: overlay.image.tag
-            value: sha-28c3394
+            value: sha-64f3bc3
             forceString: true
     - repoURL: https://github.com/Mperhats/centaur-lab-infra.git
       targetRevision: main
