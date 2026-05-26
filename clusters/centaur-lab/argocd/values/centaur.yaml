@@ -17,8 +17,8 @@ api:
 
 overlay:
   image:
-    repository: ghcr.io/Mperhats/centaur-lab
-    tag: sha-0000000
+    repository: ghcr.io/mperhats/centaur-lab/centaur-overlay
+    tag: sha-87bfef6
     pullPolicy: IfNotPresent
     sourcePath: /overlay
 

@@ -4,7 +4,7 @@ metadata:
   name: centaur
   namespace: argocd
   annotations:
-    argocd-image-updater.argoproj.io/image-list: overlay=ghcr.io/Mperhats/centaur-lab
+    argocd-image-updater.argoproj.io/image-list: overlay=ghcr.io/mperhats/centaur-lab/centaur-overlay
     argocd-image-updater.argoproj.io/write-back-method: argocd
     argocd-image-updater.argoproj.io/overlay.helm.image-name: overlay.image.repository
     argocd-image-updater.argoproj.io/overlay.helm.image-tag: overlay.image.tag
@@ -21,10 +21,10 @@ spec:
           - $values/clusters/centaur-lab/argocd/values/centaur.yaml
         parameters:
           - name: overlay.image.repository
-            value: ghcr.io/Mperhats/centaur-lab
+            value: ghcr.io/mperhats/centaur-lab/centaur-overlay
             forceString: true
           - name: overlay.image.tag
-            value: sha-0000000
+            value: sha-87bfef6
             forceString: true
           - name: api.image.tag
             value: sha-0000000

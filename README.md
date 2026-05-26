@@ -25,8 +25,8 @@ organization overlay.
 It was bootstrapped from
 [`paradigmxyz/centaur-acme-infra`](https://github.com/paradigmxyz/centaur-acme-infra)
 and adapted for the `Mperhats/centaur-lab-infra` repository, the
-`ghcr.io/Mperhats/centaur-lab` overlay image, and the `clusters/centaur-lab`
-cluster path.
+`ghcr.io/mperhats/centaur-lab/centaur-overlay` overlay image, and the
+`clusters/centaur-lab` cluster path.
 
 ```text
 centaur-lab-infra
@@ -42,9 +42,8 @@ Centaur in your Kubernetes cluster
 ## Repositories
 
 - Centaur chart: `https://github.com/paradigmxyz/centaur`
-- Overlay repo: `https://github.com/Mperhats/centaur-lab` (replace if you use a
-  different overlay repo)
-- Overlay image: `ghcr.io/Mperhats/centaur-lab`
+- Overlay repo: `https://github.com/Mperhats/centaur-lab`
+- Overlay image: `ghcr.io/mperhats/centaur-lab/centaur-overlay`
 
 ## Bootstrap
 
@@ -68,8 +67,8 @@ Edit `clusters/centaur-lab/argocd/bootstrap/centaur.yaml` and replace:
 
 - `sha-0000000` image tags with concrete tags from your image builds
 - `ghcr.io/paradigmxyz/*` base service images if you mirror them elsewhere
-- `ghcr.io/Mperhats/centaur-lab` if your overlay image lives in another
-  registry
+- `ghcr.io/mperhats/centaur-lab/centaur-overlay` if your overlay image lives in
+  another registry or path
 
 The repo tracks the Centaur chart from `main` by default. Pin
 `targetRevision` to a commit SHA for production.
