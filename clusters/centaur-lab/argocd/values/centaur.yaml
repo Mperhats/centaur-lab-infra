@@ -7,8 +7,8 @@ secretManager:
 
 api:
   image:
-    repository: ghcr.io/paradigmxyz/centaur-api
-    tag: sha-0000000
+    repository: ghcr.io/paradigmxyz/centaur/centaur-api
+    tag: sha-f2f94b1
     pullPolicy: IfNotPresent
   executionWorkerEnabled: true
   workflowWorkerEnabled: true
@@ -24,22 +24,22 @@ overlay:
 
 sandbox:
   image:
-    repository: ghcr.io/paradigmxyz/centaur-agent
-    tag: sha-0000000
+    repository: ghcr.io/paradigmxyz/centaur/centaur-agent
+    tag: sha-f2f94b1
     pullPolicy: IfNotPresent
   runtimeClassName: ""
 
 slackbot:
   enabled: true
   image:
-    repository: ghcr.io/paradigmxyz/centaur-slackbot
-    tag: sha-0000000
+    repository: ghcr.io/paradigmxyz/centaur/centaur-slackbot
+    tag: sha-f2f94b1
     pullPolicy: IfNotPresent
 
 ironProxy:
   image:
-    repository: ghcr.io/paradigmxyz/centaur-iron-proxy
-    tag: sha-0000000
+    repository: ghcr.io/paradigmxyz/centaur/centaur-iron-proxy
+    tag: sha-f2f94b1
     pullPolicy: IfNotPresent
   secretSource: onepassword
   secretTtl: 10m

@@ -27,16 +27,16 @@ spec:
             value: sha-87bfef6
             forceString: true
           - name: api.image.tag
-            value: sha-0000000
+            value: sha-f2f94b1
             forceString: true
           - name: slackbot.image.tag
-            value: sha-0000000
+            value: sha-f2f94b1
             forceString: true
           - name: sandbox.image.tag
-            value: sha-0000000
+            value: sha-f2f94b1
             forceString: true
           - name: ironProxy.image.tag
-            value: sha-0000000
+            value: sha-f2f94b1
             forceString: true
     - repoURL: https://github.com/Mperhats/centaur-lab-infra.git
       targetRevision: main
