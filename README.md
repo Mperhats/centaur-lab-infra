@@ -21,6 +21,9 @@ uv run status               # confirm Synced/Healthy + API /health
 ## Day-to-day
 
 ```bash
+uv run bump                 # resolve the newest published overlay sha
+                            # from the source repo + GHCR, edit the App,
+                            # and sync. --dry-run / --no-sync / --tag X
 uv run sync                 # apply edits to bootstrap/centaur.yaml
                             # + hard-refresh Argo CD + wait for rollout
                             #   --no-apply       just refresh + wait

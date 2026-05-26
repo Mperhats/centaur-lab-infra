@@ -13,6 +13,7 @@ status = "infra.status:main"
 clean = "infra.clean:main"
 down = "infra.down:main"
 secrets = "infra.secrets:main"
+bump = "infra.bump:main"
 
 [build-system]
 requires = ["hatchling"]
