@@ -33,7 +33,25 @@ uv run clean                # GC failed/succeeded pods + leaked sandboxes
 uv run down                 # delete the centaur App (Argo CD stays up)
                             #   --hard           also drop namespace + PVCs
 uv run secrets              # re-apply centaur-infra-env from .env
+uv run forward              # kubectl port-forwards backing the
+                            # cloudflared tunnel: api:8000 + slackbot:3001
+                            # (auto-restarts on disconnect; Ctrl-C stops)
+                            #   --only api | --only slackbot
 ```
+
+## Public ingress (Slack / GitHub webhooks)
+
+Cloudflare Tunnel exposes `https://centaur.local-labs.xyz` and routes:
+
+```
+/api/webhooks/slack  →  slackbot pod (via localhost:3001)
+everything else      →  api pod      (via localhost:8000)
+```
+
+The tunnel daemon runs as a launchd user agent (auto-starts on login,
+auto-restarts on crash) — see `infra/cloudflared/README.md` for one-time
+setup. Day-to-day all you need is `uv run forward` to keep the local
+side of the tunnel alive.
 
 ## Layout
 
@@ -41,6 +59,7 @@ uv run secrets              # re-apply centaur-infra-env from .env
 .env.example                        secret schema — cp to .env and fill in
 pyproject.toml                      uv project + console-script entry points
 infra/                              Python package backing the uv commands
+infra/cloudflared/                  Cloudflare Tunnel routing + launchd agent
 clusters/centaur-lab/argocd/
   bootstrap/                        Argo CD Application + cm patches
   values/centaur.yaml               Helm values layered on chart defaults
