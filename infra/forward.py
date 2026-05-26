@@ -12,6 +12,9 @@ with a service prefix. Ctrl-C terminates both cleanly.
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
+import signal
 import subprocess
 import sys
 import threading
@@ -30,6 +33,40 @@ TARGETS: list[tuple[str, str, str]] = [
 ]
 
 _shutting_down = threading.Event()
+
+
+def _free_port(port: int) -> None:
+    """If a stale `kubectl port-forward` holds `port`, kill it.
+
+    Refuses to kill anything that isn't a kubectl port-forward — leaves
+    those for the user to investigate.
+    """
+    if not shutil.which("lsof"):
+        return  # best-effort; the kubectl error message will surface it instead
+    out = subprocess.run(
+        ["lsof", "-i", f":{port}", "-sTCP:LISTEN", "-P", "-t"],
+        capture_output=True, text=True, check=False,
+    ).stdout.strip()
+    for pid_str in (out.splitlines() if out else []):
+        pid = int(pid_str)
+        cmdline = subprocess.run(
+            ["ps", "-o", "command=", "-p", str(pid)],
+            capture_output=True, text=True, check=False,
+        ).stdout.strip()
+        if "kubectl" not in cmdline or "port-forward" not in cmdline:
+            print(
+                f"FATAL: port {port} held by '{cmdline}' (pid {pid}); "
+                f"refusing to kill — investigate or stop it manually",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        print(f"Freeing :{port} (stale kubectl pid={pid})", flush=True)
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            continue
+    if out:
+        time.sleep(1)  # let the kernel release the listener
 
 
 @dataclass
@@ -79,6 +116,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     selected = [t for t in TARGETS if not args.only or t[0] == args.only]
+    for _, _, ports in selected:
+        _free_port(int(ports.split(":", 1)[0]))
     forwards = [Forward(*t) for t in selected]
     threads = [
         threading.Thread(target=f.run, name=f.name, daemon=True) for f in forwards
