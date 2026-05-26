@@ -20,23 +20,15 @@ spec:
         valueFiles:
           - $values/clusters/centaur-lab/argocd/values/centaur.yaml
         parameters:
+          # Argo CD Image Updater drives these two so future overlay builds
+          # (matching ^sha-[0-9a-f]{7}$) auto-bump without manual edits.
+          # Base service image tags come from values/centaur.yaml since they
+          # are dev-cluster-local right now and not on Image Updater's path.
           - name: overlay.image.repository
             value: ghcr.io/mperhats/centaur-lab/centaur-overlay
             forceString: true
           - name: overlay.image.tag
             value: sha-87bfef6
-            forceString: true
-          - name: api.image.tag
-            value: sha-f2f94b1
-            forceString: true
-          - name: slackbot.image.tag
-            value: sha-f2f94b1
-            forceString: true
-          - name: sandbox.image.tag
-            value: sha-f2f94b1
-            forceString: true
-          - name: ironProxy.image.tag
-            value: sha-f2f94b1
             forceString: true
     - repoURL: https://github.com/Mperhats/centaur-lab-infra.git
       targetRevision: main

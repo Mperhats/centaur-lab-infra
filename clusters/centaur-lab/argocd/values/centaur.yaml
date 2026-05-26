@@ -9,10 +9,31 @@ firewall:
   existingCaSecretName: centaur-firewall-ca
   existingCaKeySecretName: centaur-firewall-ca-key
 
+# NOTE on base service images:
+# The four core Centaur services (api, sandbox/agent, slackbot, iron-proxy)
+# point at unqualified `centaur-*` repositories with `tag: latest` and
+# `pullPolicy: IfNotPresent`. This is a deliberate dev-cluster deviation —
+# Docker Desktop's Kubernetes resolves these names against the locally-built
+# arm64 images already cached on this host (built by `just build-images` or
+# similar in the centaur monorepo).
+#
+# The reason: paradigmxyz/centaur publishes amd64-only images at GHCR
+# (paradigmxyz/centaur/.github/workflows/publish-images.yml lacks the
+# `platforms: linux/amd64,linux/arm64` parameter). On Apple Silicon the
+# kubelet asks for linux/arm64/v8 and gets ImagePullBackOff. Until upstream
+# publishes multi-arch (or we mirror multi-arch into ghcr.io/mperhats/...),
+# this dev cluster reads the base services from the local Docker daemon.
+#
+# The overlay image is unaffected — your overlay workflow already builds
+# linux/amd64,linux/arm64, so we keep that one pinned to GHCR.
+#
+# When deploying to an amd64 cloud cluster, override these four blocks via a
+# values overlay to point at GHCR with a sha- tag.
+
 api:
   image:
-    repository: ghcr.io/paradigmxyz/centaur/centaur-api
-    tag: sha-f2f94b1
+    repository: centaur-api
+    tag: latest
     pullPolicy: IfNotPresent
   defaultHarness: claude-code
   executionWorkerEnabled: true
@@ -49,8 +70,8 @@ agentSandbox:
 sandbox:
   controller: agent-sandbox
   image:
-    repository: ghcr.io/paradigmxyz/centaur/centaur-agent
-    tag: sha-f2f94b1
+    repository: centaur-agent
+    tag: latest
     pullPolicy: IfNotPresent
   reposPath: /var/lib/centaur/repos
   stateVolume:
@@ -62,14 +83,14 @@ sandbox:
 slackbot:
   enabled: true
   image:
-    repository: ghcr.io/paradigmxyz/centaur/centaur-slackbot
-    tag: sha-f2f94b1
+    repository: centaur-slackbot
+    tag: latest
     pullPolicy: IfNotPresent
 
 ironProxy:
   image:
-    repository: ghcr.io/paradigmxyz/centaur/centaur-iron-proxy
-    tag: sha-f2f94b1
+    repository: centaur-iron-proxy
+    tag: latest
     pullPolicy: IfNotPresent
   secretSource: env
   secretTtl: 10m
