@@ -6,25 +6,33 @@
 # this file only encodes what is *unique* to the centaur-lab cluster.
 #
 # Image strategy on Apple Silicon (Docker Desktop):
-#   paradigmxyz/centaur publishes amd64-only images under
-#   `ghcr.io/paradigmxyz/centaur/centaur-*`. We rely on Docker Desktop's
+#   paradigmxyz/centaur publishes amd64-only images. Docker Desktop's
 #   "Use Rosetta for x86_64/amd64 emulation on Apple Silicon" toggle
-#   (Settings → General) to translate at runtime — no fork, no self-publish.
-#   See README.md for the bootstrap checklist.
+#   (Settings → General) lets the host *run* amd64 binaries, but kubelet
+#   still negotiates pulls as `linux/arm64/v8` and the upstream manifest
+#   list returns no match → ImagePullBackOff.
 #
-#   The chart's default image.repository values are unqualified (e.g.
-#   `centaur-api`) which would resolve to docker.io/library/* — so we have
-#   to set the GHCR repo explicitly for each base service. This mirrors the
-#   `source=ghcr` pattern documented at
-#   https://docs.centaur.dev/mac-mini-setup
+#   The fix is to bypass platform negotiation by pinning each image to its
+#   amd64-specific digest (`tag@sha256:...`). Kubelet pulls the digest
+#   directly, gets the amd64 manifest, and Rosetta translates at runtime.
 #
-#   Tag is :latest to track main-branch builds; pullPolicy: IfNotPresent
-#   keeps the cached layer warm across pod restarts. Pin a specific
-#   `sha-XXXXXXX` tag here if you need reproducibility.
+#   When upstream rebuilds these images, refresh the digests with:
+#     for img in centaur-api centaur-slackbot centaur-agent centaur-iron-proxy; do
+#       T=$(curl -s "https://ghcr.io/token?scope=repository:paradigmxyz/centaur/$img:pull" | jq -r .token)
+#       curl -s -H "Authorization: Bearer $T" \
+#         -H "Accept: application/vnd.oci.image.index.v1+json" \
+#         "https://ghcr.io/v2/paradigmxyz/centaur/$img/manifests/latest" \
+#         | jq -r --arg img "$img" '.manifests[] | select(.platform.architecture=="amd64" and .platform.os=="linux") | "\($img): \(.digest)"'
+#     done
+#
+#   On amd64 production clusters: drop the `@sha256:...` portion of each
+#   tag. Plain `:latest` (or pin a `sha-XXXXXXX` tag) is sufficient when
+#   the host arch matches the manifest.
 
 api:
   image:
     repository: ghcr.io/paradigmxyz/centaur/centaur-api
+    tag: latest@sha256:0b166c154727c66d0d48ec6e145e5c605ef125f1d076d16c8596981cef66cd23
     pullPolicy: IfNotPresent
   defaultHarness: claude-code
   executionWorkerEnabled: true
@@ -51,11 +59,13 @@ overlay: {}
 slackbot:
   image:
     repository: ghcr.io/paradigmxyz/centaur/centaur-slackbot
+    tag: latest@sha256:305cc0faf4e57a33b516b8aa8dd78d7dd25434171873289cb2926608acfa51fe
     pullPolicy: IfNotPresent
 
 ironProxy:
   image:
     repository: ghcr.io/paradigmxyz/centaur/centaur-iron-proxy
+    tag: latest@sha256:a84354d1b695409c59429d6dd486d23b0cdd2decbf197e7b542938076c3a7291
     pullPolicy: IfNotPresent
   # Chart default is `onepassword`. We resolve tool/harness credentials from
   # the centaur-infra-env Secret instead, so iron-proxy reads them as plain
@@ -72,6 +82,7 @@ agentSandbox:
 sandbox:
   image:
     repository: ghcr.io/paradigmxyz/centaur/centaur-agent
+    tag: latest@sha256:6ef1d57d31e3bb564d1090a000d7c56aab27a50dca1d4254e703e996af87e24f
     pullPolicy: IfNotPresent
   controller: agent-sandbox
   reposPath: /var/lib/centaur/repos

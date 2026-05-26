@@ -75,23 +75,32 @@ clusters/centaur-lab/argocd/
 `ghcr.io/paradigmxyz/centaur/centaur-*` — the workflow in
 `paradigmxyz/centaur/.github/workflows/publish-images.yml` lacks a
 `platforms: linux/amd64,linux/arm64` build directive, so the manifest list
-contains only `linux/amd64`. On Apple Silicon, kubelet asks for
-`linux/arm64/v8` and would fall through to `ImagePullBackOff`.
+contains only `linux/amd64`. On Apple Silicon, kubelet negotiates pulls as
+`linux/arm64/v8` and would fall through to `ImagePullBackOff` — even with
+Rosetta enabled, because Rosetta only changes runtime execution, not the
+arch kubelet *requests* during pull.
 
-The fix is **Docker Desktop's Rosetta emulation toggle** (see Prerequisites).
-With it on, the Docker Desktop runtime advertises support for `linux/amd64`
-on the arm64 host, kubelet pulls the amd64 manifest, and the binary runs
-under Rosetta translation. Trade-off: ~2-4× CPU overhead vs native arm64
-for compute-heavy pods. Acceptable for a single-host lab; revisit if the
-agent pods feel slow.
+**Two pieces are required**:
+
+1. **Docker Desktop's Rosetta toggle** (see Prerequisites) — lets the host
+   actually *run* the amd64 binaries once they're on disk. Trade-off:
+   ~2-4× CPU overhead vs native arm64 for compute-heavy pods. Acceptable
+   for a single-host lab; revisit if the agent pods feel slow.
+2. **Digest-pinned image refs in `values/centaur.yaml`** — each base
+   service references `tag: latest@sha256:<amd64-digest>`. Pulling by
+   digest skips arch negotiation entirely; kubelet pulls exactly the
+   amd64 manifest the digest points at, and Rosetta runs it.
+
+When upstream rebuilds the images, the digests need refreshing. The
+values file has the bash one-liner inline.
 
 The overlay image is unaffected — `Mperhats/centaur-lab`'s overlay workflow
-publishes `linux/amd64,linux/arm64` so it pulls natively on both platforms.
+publishes `linux/amd64,linux/arm64`, so it pulls natively on both platforms
+without digest pinning.
 
-For real production clusters (amd64 cloud nodes), no change is needed —
-upstream amd64 images run as-is with no emulation. You can also drop
-`pullPolicy: IfNotPresent` and pin specific `sha-*` tags by editing
-`values/centaur.yaml`.
+For amd64 production clusters, drop the `@sha256:...` portion of each tag
+in `values/centaur.yaml`. Plain `:latest` (or a pinned `:sha-XXXXXXX`) is
+sufficient when the host arch matches the manifest.
 
 ## License
 
