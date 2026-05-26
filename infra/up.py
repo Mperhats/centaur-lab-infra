@@ -9,7 +9,7 @@ import sys
 
 from . import secrets as secrets_cmd
 from . import sync as sync_cmd
-from ._common import BOOTSTRAP_DIR, kubectl
+from ._common import BOOTSTRAP_DIR, ensure_namespace, kubectl
 
 ARGOCD_INSTALL_URL = (
     "https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml"
@@ -23,11 +23,7 @@ def main() -> int:
         check=False, capture=True,
     ).returncode == 0
     if not argocd_present:
-        ns_yaml = kubectl(
-            "create", "namespace", "argocd",
-            "--dry-run=client", "-o", "yaml", capture=True,
-        ).stdout
-        kubectl("apply", "-f", "-", input=ns_yaml)
+        ensure_namespace("argocd")
         kubectl(
             "apply", "-n", "argocd", "--server-side", "--force-conflicts",
             "-f", ARGOCD_INSTALL_URL,

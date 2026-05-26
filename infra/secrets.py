@@ -10,16 +10,14 @@ from __future__ import annotations
 import os
 import re
 import shutil
-import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from string import Template
 
-from ._common import REPO_ROOT, kubectl, run
+from ._common import NAMESPACE, REPO_ROOT, ensure_namespace, kubectl, run
 
 ENV_FILE = Path(os.environ.get("ENV_FILE", REPO_ROOT / ".env"))
-NAMESPACE = os.environ.get("CENTAUR_NAMESPACE", "centaur-system")
 SKIP_KEYS = {"CENTAUR_NAMESPACE"}
 EXPORT_RE = re.compile(r"^export\s+([A-Z_][A-Z0-9_]*)=(.*)$")
 
@@ -59,12 +57,7 @@ def main() -> int:
 
     env = parse_env(ENV_FILE)
 
-    # Namespace
-    ns_yaml = kubectl(
-        "create", "namespace", NAMESPACE,
-        "--dry-run=client", "-o", "yaml", capture=True,
-    ).stdout
-    kubectl("apply", "-f", "-", input=ns_yaml, capture=True)
+    ensure_namespace(NAMESPACE)
 
     # centaur-infra-env Secret
     literal_args: list[str] = [

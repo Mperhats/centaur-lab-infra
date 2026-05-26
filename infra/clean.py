@@ -14,10 +14,9 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import json
 import sys
 
-from ._common import NAMESPACE, kubectl
+from ._common import NAMESPACE, kubectl, kubectl_json
 
 
 def _terminating_for_too_long(pods: list[dict], now: dt.datetime, threshold_s: int = 60) -> list[str]:
@@ -52,11 +51,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print()
     print("=== Pods stuck Terminating > 60s ===")
-    pods_json = kubectl(
-        "-n", NAMESPACE, "get", "pods", "-o", "json",
-        check=False, capture=True,
-    ).stdout or "{}"
-    pods = json.loads(pods_json).get("items", [])
+    pods = kubectl_json("-n", NAMESPACE, "get", "pods").get("items", [])
     for name in _terminating_for_too_long(pods, dt.datetime.now(dt.timezone.utc)):
         kubectl(
             "-n", NAMESPACE, "delete", "pod", name,
@@ -71,11 +66,8 @@ def main(argv: list[str] | None = None) -> int:
         )
     else:
         alive = {p["metadata"]["name"] for p in pods}
-        sb_json = kubectl(
-            "-n", NAMESPACE, "get", "sandboxes", "-o", "json",
-            check=False, capture=True,
-        ).stdout or "{}"
-        for s in json.loads(sb_json).get("items", []):
+        sandboxes = kubectl_json("-n", NAMESPACE, "get", "sandboxes").get("items", [])
+        for s in sandboxes:
             name = s["metadata"]["name"]
             if name not in alive:
                 kubectl(

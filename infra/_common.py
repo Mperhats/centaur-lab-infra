@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -29,6 +30,24 @@ def run(*args: str, check: bool = True, capture: bool = False, **kwargs) -> subp
 def kubectl(*args: str, **kwargs) -> subprocess.CompletedProcess[str]:
     """Run `kubectl ...` with the same defaults as `run`."""
     return run("kubectl", *args, **kwargs)
+
+
+def ensure_namespace(name: str) -> None:
+    """Idempotently create a namespace via dry-run + apply (server-managed)."""
+    yaml = kubectl(
+        "create", "namespace", name,
+        "--dry-run=client", "-o", "yaml", capture=True,
+    ).stdout
+    kubectl("apply", "-f", "-", input=yaml, capture=True)
+
+
+def kubectl_json(*args: str) -> dict:
+    """`kubectl get ... -o json` -> parsed dict ({} if the resource is missing).
+
+    Pass everything after `kubectl`, e.g. `kubectl_json("-n", ns, "get", "pods")`.
+    """
+    out = kubectl(*args, "-o", "json", check=False, capture=True).stdout
+    return json.loads(out) if out else {}
 
 
 def argo_status() -> tuple[str, str, str]:

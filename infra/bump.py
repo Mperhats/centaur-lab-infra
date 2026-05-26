@@ -16,14 +16,20 @@ import argparse
 import json
 import re
 import sys
-import urllib.error
 import urllib.request
+from typing import Any
 
 from . import sync as sync_cmd
 from ._common import BOOTSTRAP_DIR, REPO_ROOT
 
 APP_FILE = BOOTSTRAP_DIR / "centaur.yaml"
 COMMITS_TO_SCAN = 20
+
+
+def _http_json(url: str, headers: dict[str, str] | None = None) -> Any:
+    req = urllib.request.Request(url, headers=headers or {})
+    with urllib.request.urlopen(req) as r:
+        return json.load(r)
 
 
 def _parse_image(app_yaml: str) -> tuple[str, str, str]:
@@ -52,28 +58,26 @@ def _current_tag(app_yaml: str) -> str | None:
 
 
 def _ghcr_token(owner: str, package: str) -> str:
-    url = f"https://ghcr.io/token?scope=repository:{owner}/{package}:pull"
-    with urllib.request.urlopen(url) as r:
-        return json.load(r)["token"]
+    return _http_json(
+        f"https://ghcr.io/token?scope=repository:{owner}/{package}:pull"
+    )["token"]
 
 
 def _ghcr_tags(owner: str, package: str, token: str) -> set[str]:
-    req = urllib.request.Request(
+    body = _http_json(
         f"https://ghcr.io/v2/{owner}/{package}/tags/list",
         headers={"Authorization": f"Bearer {token}"},
     )
-    with urllib.request.urlopen(req) as r:
-        return set(json.load(r).get("tags") or [])
+    return set(body.get("tags") or [])
 
 
 def _github_commits(owner: str, repo: str, n: int) -> list[str]:
     """Newest-first short shas from the source repo's default branch."""
-    req = urllib.request.Request(
+    body = _http_json(
         f"https://api.github.com/repos/{owner}/{repo}/commits?per_page={n}",
         headers={"Accept": "application/vnd.github+json"},
     )
-    with urllib.request.urlopen(req) as r:
-        return [c["sha"][:7] for c in json.load(r)]
+    return [c["sha"][:7] for c in body]
 
 
 def _resolve_latest(owner: str, package: str, repo: str) -> tuple[str, str]:
