@@ -5,15 +5,32 @@ secretManager:
   existingSecretName: centaur-infra-env
   envPrefix: ""
 
+firewall:
+  existingCaSecretName: centaur-firewall-ca
+  existingCaKeySecretName: centaur-firewall-ca-key
+
 api:
   image:
     repository: ghcr.io/paradigmxyz/centaur/centaur-api
     tag: sha-f2f94b1
     pullPolicy: IfNotPresent
+  defaultHarness: claude-code
   executionWorkerEnabled: true
   workflowWorkerEnabled: true
-  warmPoolEnabled: true
-  runtimeCredentialGuardEnabled: true
+  warmPoolEnabled: false
+  pluginWatcherEnabled: true
+  slackEtlEnabled: true
+  slackSyncBackfillLookbackDays: 700
+  egressDiscovery:
+    enabled: false
+  extraEnv:
+    BFTS_DRAFT_MODEL: claude-sonnet-4-20250514
+    BFTS_FEEDBACK_MODEL: claude-sonnet-4-20250514
+    BFTS_VLM_MODEL: claude-sonnet-4-20250514
+    BFTS_LLM_API_KEY_SECRET: ANTHROPIC_API_KEY
+    BFTS_NUM_SEEDS: "2"
+    BFTS_REFLECTION_ENABLED: "1"
+    WORKFLOW_WORKER_CONCURRENCY: "16"
 
 overlay:
   image:
@@ -22,15 +39,28 @@ overlay:
     pullPolicy: IfNotPresent
     sourcePath: /overlay
 
+agentSandbox:
+  enabled: true
+  controller:
+    extensions: true
+    sandboxClaimConcurrentWorkers: 25
+    sandboxWarmPoolConcurrentWorkers: 5
+
 sandbox:
+  controller: agent-sandbox
   image:
     repository: ghcr.io/paradigmxyz/centaur/centaur-agent
     tag: sha-f2f94b1
     pullPolicy: IfNotPresent
+  reposPath: /var/lib/centaur/repos
+  stateVolume:
+    enabled: true
+    size: 1Gi
+    storageClassName: ""
   runtimeClassName: ""
 
 slackbot:
-  enabled: false
+  enabled: true
   image:
     repository: ghcr.io/paradigmxyz/centaur/centaur-slackbot
     tag: sha-f2f94b1
@@ -43,6 +73,16 @@ ironProxy:
     pullPolicy: IfNotPresent
   secretSource: env
   secretTtl: 10m
+
+repoCache:
+  enabled: true
+  hostPath: /var/lib/centaur/repos
+  syncIntervalSeconds: 300
+  repositories:
+    - Mperhats/centaur-lab
+  githubToken:
+    existingSecretName: centaur-infra-env
+    secretKey: GITHUB_TOKEN
 
 postgres:
   enabled: true
