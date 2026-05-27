@@ -59,8 +59,13 @@ api:
     # Dedicated pool for when upstream exposes batch upstream timeout (Increment 1).
     # Ignored while BFTS_LLM_DIRECT_EGRESS=1.
     BFTS_LLM_HTTPS_PROXY: "http://centaur-batch-proxy:8080"
-    # Lower burst load on iron-proxy when direct egress is disabled.
-    WORKFLOW_WORKER_CONCURRENCY: "4"
+    # Workflow worker pool. Each ``bfts_tree`` run pins a worker for the
+    # duration of one iteration (~2 min) before yielding via
+    # ``ctx.sleep(timedelta(0))`` (overlay sha-1c5e58d / centaur-lab#30);
+    # ``bfts_root``'s 90s progress poller and other workflows need
+    # headroom on top. Sized for ~4 concurrent BFTS chains (~8 trees +
+    # 4 roots + ideation/Slack churn) without starvation.
+    WORKFLOW_WORKER_CONCURRENCY: "16"
     # Pinned commit tag for the BFTS sandbox runtime image. Built by
     # mperhats/centaur-lab's .github/workflows/bfts-executor.yml on
     # pushes to main (and on Dockerfile.bfts-executor changes). Tags are
