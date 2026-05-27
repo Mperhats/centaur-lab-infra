@@ -64,11 +64,26 @@ api:
     # drift from this without breaking runtime — this env var overrides it
     # — but the two SHOULD track each other in matched PRs.
     #
+    # The tag is suffixed with the amd64-specific manifest digest for the
+    # same reason as the base service images above: this Dockerfile is
+    # amd64-only (torch wheel availability) and kubelet on Apple Silicon
+    # Docker Desktop negotiates `linux/arm64/v8`, which the multi-arch
+    # manifest list (here, single-arch + an `unknown/unknown` attestation
+    # entry) rejects. Pinning `tag@sha256:<amd64-digest>` bypasses
+    # negotiation; Rosetta translates at runtime. Refresh with:
+    #   TAG=df-63eafbcb...; \
+    #   T=$(curl -s "https://ghcr.io/token?scope=repository:mperhats/centaur-lab/bfts-executor:pull" | jq -r .token); \
+    #   curl -s -H "Authorization: Bearer $T" \
+    #     -H "Accept: application/vnd.oci.image.index.v1+json" \
+    #     "https://ghcr.io/v2/mperhats/centaur-lab/bfts-executor/manifests/$TAG" \
+    #     | jq -r '.manifests[] | select(.platform.architecture=="amd64") | .digest'
+    # On an amd64 production cluster, drop the `@sha256:...` suffix.
+    #
     # No :latest fallback; leaving this unset would let the sandbox pull
     # whatever the executor workflow last pushed under :latest (we no
     # longer publish that tag, but the env var is still the canonical
     # override point).
-    BFTS_EXECUTOR_IMAGE: ghcr.io/mperhats/centaur-lab/bfts-executor:df-63eafbcb3da2f4524b6fd58dad6ea5c4e418e44a1325d6f9804a863e95ebeb53
+    BFTS_EXECUTOR_IMAGE: ghcr.io/mperhats/centaur-lab/bfts-executor:df-63eafbcb3da2f4524b6fd58dad6ea5c4e418e44a1325d6f9804a863e95ebeb53@sha256:514f9f8b2e5e8bd0260bb659230fd85aa103dc8c0a12aa0eb0586565a2c49cec
 
 # Overlay image repository and tag are set in bootstrap/centaur.yaml's
 # helm.parameters block so Argo CD Image Updater can bump the tag in place
