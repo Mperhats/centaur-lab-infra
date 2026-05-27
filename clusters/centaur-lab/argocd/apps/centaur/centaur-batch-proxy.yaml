@@ -1,10 +1,13 @@
-# Dedicated iron-proxy pool for BFTS expand + VLM LLM egress.
+# Dedicated iron-proxy pool for BFTS expand + VLM LLM egress (traffic isolation).
 #
-# Shares the API-managed centaur-api-proxy-config ConfigMap (same secret
-# transforms) but runs as a separate Deployment so batch traffic can scale
-# independently once upstream exposes per-pool upstream timeouts.
+# Today this Deployment shares centaur-api-proxy-config, so upstream header
+# timeout is still ~30s. centaur-lab enables BFTS_LLM_DIRECT_EGRESS on the
+# API pod as an interim fix (see centaur-lab docs/bfts-batch-iron-proxy.md).
+# When upstream exposes per-pool upstream timeouts, mount a batch-specific
+# ConfigMap here and disable direct egress.
 #
-# Overlay routes BFTS httpx clients via BFTS_LLM_HTTPS_PROXY → this Service.
+# Long-term: Centaur Apps (https://centaur.ai/extend/apps) for app-plane batch
+# workloads with independent egress policy — no Centaur fork required.
 ---
 apiVersion: v1
 kind: Service

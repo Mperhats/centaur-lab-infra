@@ -52,10 +52,14 @@ api:
     BFTS_NUM_DRAFTS: "2"
     BFTS_NUM_WORKERS: "1"
     BFTS_REFLECTION_ENABLED: "1"
-    # BFTS expand + VLM LLM calls use a dedicated iron-proxy pool (see
-    # clusters/centaur-lab/argocd/apps/centaur/centaur-batch-proxy.yaml).
+    # Interim: BFTS expand/VLM LLM calls bypass iron-proxy from the trusted API
+    # pod (avoids ~30s upstream header timeout → synthetic 502). Sandboxes and
+    # interactive tools still use iron-proxy. See docs/bfts-batch-iron-proxy.md.
+    BFTS_LLM_DIRECT_EGRESS: "1"
+    # Dedicated pool for when upstream exposes batch upstream timeout (Increment 1).
+    # Ignored while BFTS_LLM_DIRECT_EGRESS=1.
     BFTS_LLM_HTTPS_PROXY: "http://centaur-batch-proxy:8080"
-    # Lower burst load on iron-proxy (30s upstream timeout → synthetic 502).
+    # Lower burst load on iron-proxy when direct egress is disabled.
     WORKFLOW_WORKER_CONCURRENCY: "4"
     # Pinned commit tag for the BFTS sandbox runtime image. Built by
     # mperhats/centaur-lab's .github/workflows/bfts-executor.yml on
