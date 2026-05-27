@@ -34,7 +34,7 @@ spec:
             value: ghcr.io/mperhats/centaur-lab/centaur-overlay
             forceString: true
           - name: overlay.image.tag
-            value: sha-3fc6ed4
+            value: sha-229729e
             forceString: true
     - repoURL: https://github.com/Mperhats/centaur-lab-infra.git
       targetRevision: main
