@@ -11,7 +11,7 @@
   set in the launchd environment (it usually is not).
 
   This template uses absolute paths exclusively, so the daemon's launchd
-  environment is irrelevant. `just cloudflared::install-service` renders
+  environment is irrelevant. `uv run tunnel install` renders
   __TUNNEL_BIN__, __CONFIG_PATH__, and __LOG_PATH__ before loading.
 -->
 <plist version="1.0">

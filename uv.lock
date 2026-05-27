@@ -2,7 +2,24 @@ version = 1
 revision = 3
 requires-python = ">=3.11"
 
+[manifest]
+members = [
+    "centaur-lab-infra",
+    "cloudflared-tunnel",
+]
+
 [[package]]
 name = "centaur-lab-infra"
 version = "0.1.0"
 source = { editable = "." }
+dependencies = [
+    { name = "cloudflared-tunnel" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "cloudflared-tunnel", editable = "infra/cloudflared" }]
+
+[[package]]
+name = "cloudflared-tunnel"
+version = "0.1.0"
+source = { editable = "infra/cloudflared" }
