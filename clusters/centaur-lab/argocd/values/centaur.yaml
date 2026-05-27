@@ -46,9 +46,14 @@ api:
     BFTS_FEEDBACK_MODEL: claude-sonnet-4-20250514
     BFTS_VLM_MODEL: claude-sonnet-4-20250514
     BFTS_LLM_API_KEY_SECRET: ANTHROPIC_API_KEY
-    BFTS_NUM_SEEDS: "2"
+    # Fallback when run_input omits hyperparams (smoke/CLI). Slack research runs
+    # should use bfts_research or ideation's bfts_run_input (input tier wins).
+    BFTS_NUM_SEEDS: "3"
+    BFTS_NUM_DRAFTS: "2"
+    BFTS_NUM_WORKERS: "1"
     BFTS_REFLECTION_ENABLED: "1"
-    WORKFLOW_WORKER_CONCURRENCY: "16"
+    # Lower burst load on iron-proxy (30s upstream timeout → synthetic 502).
+    WORKFLOW_WORKER_CONCURRENCY: "8"
     # Pinned commit tag for the BFTS sandbox runtime image. Built by
     # mperhats/centaur-lab's .github/workflows/bfts-executor.yml on
     # pushes to main (and on Dockerfile.bfts-executor changes). Tags are
