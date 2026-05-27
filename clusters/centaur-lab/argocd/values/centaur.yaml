@@ -52,6 +52,9 @@ api:
     BFTS_NUM_DRAFTS: "2"
     BFTS_NUM_WORKERS: "1"
     BFTS_REFLECTION_ENABLED: "1"
+    # BFTS expand + VLM LLM calls use a dedicated iron-proxy pool (see
+    # clusters/centaur-lab/argocd/apps/centaur/centaur-batch-proxy.yaml).
+    BFTS_LLM_HTTPS_PROXY: "http://centaur-batch-proxy:8080"
     # Lower burst load on iron-proxy (30s upstream timeout → synthetic 502).
     WORKFLOW_WORKER_CONCURRENCY: "4"
     # Pinned commit tag for the BFTS sandbox runtime image. Built by

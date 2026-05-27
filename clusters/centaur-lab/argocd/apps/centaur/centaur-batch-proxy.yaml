@@ -1,0 +1,120 @@
+# Dedicated iron-proxy pool for BFTS expand + VLM LLM egress.
+#
+# Shares the API-managed centaur-api-proxy-config ConfigMap (same secret
+# transforms) but runs as a separate Deployment so batch traffic can scale
+# independently once upstream exposes per-pool upstream timeouts.
+#
+# Overlay routes BFTS httpx clients via BFTS_LLM_HTTPS_PROXY → this Service.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: centaur-batch-proxy
+  namespace: centaur-system
+  labels:
+    app.kubernetes.io/name: centaur
+    app.kubernetes.io/component: iron-proxy-batch
+    centaur.ai/iron-proxy: "true"
+    centaur.ai/sandbox-id: batch
+spec:
+  selector:
+    centaur.ai/iron-proxy: "true"
+    centaur.ai/sandbox-id: batch
+  ports:
+    - name: proxy
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: centaur-batch-proxy
+  namespace: centaur-system
+  labels:
+    app.kubernetes.io/name: centaur
+    app.kubernetes.io/component: iron-proxy-batch
+    centaur.ai/iron-proxy: "true"
+    centaur.ai/sandbox-id: batch
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      centaur.ai/iron-proxy: "true"
+      centaur.ai/sandbox-id: batch
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: centaur
+        app.kubernetes.io/component: iron-proxy-batch
+        centaur.ai/iron-proxy: "true"
+        centaur.ai/sandbox-id: batch
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: iron-proxy
+          image: ghcr.io/paradigmxyz/centaur/centaur-iron-proxy:latest@sha256:a84354d1b695409c59429d6dd486d23b0cdd2decbf197e7b542938076c3a7291
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-ec"]
+          args:
+            - cp /etc/iron-proxy-rendered/proxy.yaml /etc/iron-proxy/proxy.yaml && exec /entrypoint.sh
+          ports:
+            - name: proxy
+              containerPort: 8080
+            - name: management
+              containerPort: 9092
+            - name: health
+              containerPort: 9090
+          env:
+            - name: IRON_MANAGEMENT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: centaur-infra-env
+                  key: IRON_MANAGEMENT_API_KEY
+          envFrom:
+            - secretRef:
+                name: centaur-infra-env
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 9090
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 9090
+            periodSeconds: 5
+            failureThreshold: 30
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: [ALL]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: iron-proxy-config-rendered
+              mountPath: /etc/iron-proxy-rendered
+              readOnly: true
+            - name: iron-proxy-config
+              mountPath: /etc/iron-proxy
+            - name: iron-proxy-certs
+              mountPath: /certs
+            - name: iron-proxy-ca
+              mountPath: /etc/iron-proxy-ca
+              readOnly: true
+      volumes:
+        - name: iron-proxy-config-rendered
+          configMap:
+            name: centaur-api-proxy-config
+        - name: iron-proxy-config
+          emptyDir: {}
+        - name: iron-proxy-certs
+          emptyDir: {}
+        - name: iron-proxy-ca
+          secret:
+            secretName: centaur-firewall-ca-key
