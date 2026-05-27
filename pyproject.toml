@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "GitOps lifecycle commands for the centaur-system deployment"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "cloudflared-tunnel",
+]
 
 [project.scripts]
 up = "infra.up:main"
@@ -22,3 +24,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["infra"]
+exclude = ["infra/cloudflared/**"]
+
+[tool.uv.workspace]
+members = ["infra/cloudflared"]
+
+[tool.uv.sources]
+cloudflared-tunnel = { workspace = true }

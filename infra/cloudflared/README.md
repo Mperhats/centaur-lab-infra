@@ -13,25 +13,27 @@ providers (GitHub, etc.) can deliver events to your laptop.
 The tunnel runs as a launchd user agent (`com.local-labs.centaur-tunnel`),
 auto-starts on login, and auto-restarts on crash. You don't manage it
 per-session. The only per-session thing is the two `kubectl port-forward`s
-backing the tunnel's local targets — owned by your local stack (port 8000
+backing the tunnel's local targets — owned by `uv run forward` (port 8000
 for the Centaur API, 3001 for the Slackbot).
 
 ## Managing the tunnel agent
 
-All commands live in this directory's `Justfile`. Run them from inside
-`cloudflared/`. Service recipes are gated by Just's `[macos]` attribute —
-on Linux they're simply hidden, and you'd write a sibling systemd-user-unit
-variant (`[linux]`) when needed.
+This directory is a uv workspace member (`cloudflared-tunnel`) exposing a
+single `tunnel` console script with subcommands. Run them from anywhere in
+the repo:
 
 ```bash
-cd cloudflared/
-just status                 # is the agent loaded? running? pid?
-just logs                   # tail ~/Library/Logs/centaur-tunnel.log
-just install-service        # idempotent install / re-install
-just uninstall-service      # remove the agent (confirms)
-just --yes uninstall-service  # skip the confirm prompt
-just run                    # foreground run for debugging (uninstall first to avoid connector race)
+uv run tunnel status                # is the agent loaded? running? pid?
+uv run tunnel logs                  # tail ~/Library/Logs/centaur-tunnel.log
+uv run tunnel install               # idempotent install / re-install
+uv run tunnel uninstall             # remove the agent (confirms)
+uv run tunnel uninstall --yes       # skip the confirm prompt
+uv run tunnel run                   # foreground run for debugging (uninstall first)
 ```
+
+The launchd-only commands (`install`, `uninstall`, `status`, `logs`) refuse
+to run on non-macOS — write a sibling systemd-user-unit module on Linux
+when needed.
 
 ## One-time setup on a fresh machine
 
@@ -71,20 +73,20 @@ both.
 4. Confirm the routing config is valid:
 
    ```bash
-   cloudflared tunnel --config cloudflared/config.yml ingress validate
+   cloudflared tunnel --config infra/cloudflared/config.yml ingress validate
    ```
 
 5. Install the launch agent (one-time per machine):
 
    ```bash
-   cd cloudflared/ && just install-service
+   uv run tunnel install
    ```
 
 6. Verify it's connected:
 
    ```bash
-   just status   # should show state = running, pid = N
-   just logs     # should show "Registered tunnel connection" lines
+   uv run tunnel status   # should show state = running, pid = N
+   uv run tunnel logs     # should show "Registered tunnel connection" lines
    ```
 
 ## Why a hand-rolled plist instead of `cloudflared service install`?
@@ -95,7 +97,7 @@ the daemon exits immediately, and the workarounds (symlink config + `plutil`
 patch) end up bigger than just writing the plist ourselves.
 
 The template uses absolute paths everywhere so the daemon doesn't depend on
-launchd's minimal environment; `install-service` substitutes the cloudflared
+launchd's minimal environment; `tunnel install` substitutes the cloudflared
 binary path, the repo config path, and the log path before loading.
 
 ## How it routes
@@ -123,19 +125,17 @@ rule would shadow the Slackbot route.
 After editing `config.yml`, reload the agent:
 
 ```bash
-cd cloudflared/
-just --yes uninstall-service && just install-service
+uv run tunnel uninstall --yes && uv run tunnel install
 ```
 
 ## Tearing it down
 
-To stop the tunnel agent: `just uninstall-service` (from `cloudflared/`).
+To stop the tunnel agent: `uv run tunnel uninstall`.
 
 To delete the tunnel entirely (e.g. rotating it):
 
 ```bash
-cd cloudflared/
-just uninstall-service
+uv run tunnel uninstall --yes
 cloudflared tunnel delete centaur-dev
 ```
 

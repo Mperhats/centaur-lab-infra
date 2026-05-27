@@ -37,6 +37,9 @@ uv run forward              # kubectl port-forwards backing the
                             # cloudflared tunnel: api:8000 + slackbot:3001
                             # (auto-restarts on disconnect; Ctrl-C stops)
                             #   --only api | --only slackbot
+uv run tunnel <cmd>         # manage the cloudflared launchd agent
+                            #   install | uninstall [--yes] | status
+                            #   logs    | run (foreground debug)
 ```
 
 ## Public ingress (Slack / GitHub webhooks)
@@ -57,9 +60,10 @@ side of the tunnel alive.
 
 ```
 .env.example                        secret schema — cp to .env and fill in
-pyproject.toml                      uv project + console-script entry points
-infra/                              Python package backing the uv commands
-infra/cloudflared/                  Cloudflare Tunnel routing + launchd agent
+pyproject.toml                      uv workspace root + console-script entry points
+infra/                              Python package backing the core uv commands
+infra/cloudflared/                  uv workspace member: tunnel routing,
+                                    launchd agent, and `uv run tunnel ...`
 clusters/centaur-lab/argocd/
   bootstrap/                        Argo CD Application + cm patches
   values/centaur.yaml               Helm values layered on chart defaults
