@@ -17,6 +17,7 @@ down = "infra.down:main"
 secrets = "infra.secrets:main"
 bump = "infra.bump:main"
 forward = "infra.forward:main"
+bfts-status = "infra.bfts_status:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -28,6 +28,9 @@ uv run sync                 # apply edits to bootstrap/centaur.yaml
                             # + hard-refresh Argo CD + wait for rollout
                             #   --no-apply       just refresh + wait
 uv run status               # at-a-glance app + pod + sandbox health
+uv run bfts-status <wfr_…>  # BFTS workflow run progress (tree children,
+                            #   sandbox pods, recent checkpoints)
+                            #   --watch 15  poll every 15s
 uv run clean                # GC failed/succeeded pods + leaked sandboxes
                             #   --all-sandboxes  also remove Running ones
 uv run down                 # delete the centaur App (Argo CD stays up)
